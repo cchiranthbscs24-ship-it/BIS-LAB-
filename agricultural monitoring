@@ -1,0 +1,75 @@
+import numpy as np
+
+def evaluate_coverage(particle, target_coverage):
+    """
+    Calculates the error between the current particle position (sensor allocation)
+    and the ideal target coverage inputs from the user. Lower error = better fitness.
+    """
+    return float(np.sum((particle - target_coverage) ** 2))
+
+#
+def run_agriculture_pso(target_coverage, num_particles=20, max_iterations=50):
+    dim = len(target_coverage)
+    
+    X = np.random.uniform(0, 100, (num_particles, dim))
+    V = np.zeros((num_particles, dim))
+    
+    pbest = X.copy()
+    pbest_fitness = np.array([evaluate_coverage(p, target_coverage) for p in X])
+    
+    gbest_index = np.argmin(pbest_fitness)
+    gbest = pbest[gbest_index].copy()
+    gbest_fitness = pbest_fitness[gbest_index]
+    
+    
+    w = 0.5   
+    c1 = 1.5  
+    c2 = 1.5  
+    
+    for _ in range(max_iterations):
+        for i in range(num_particles):
+            r1 = np.random.rand(dim)
+            r2 = np.random.rand(dim)
+            
+            V[i] = (w * V[i] + 
+                    c1 * r1 * (pbest[i] - X[i]) + 
+                    c2 * r2 * (gbest - X[i]))
+            
+            X[i] = X[i] + V[i]
+            
+            X[i] = np.clip(X[i], 0, 100)
+            
+            current_fitness = evaluate_coverage(X[i], target_coverage)
+            
+            if current_fitness < pbest_fitness[i]:
+                pbest_fitness[i] = current_fitness
+                pbest[i] = X[i].copy()
+                
+            if current_fitness < gbest_fitness:
+                gbest_fitness = current_fitness
+                gbest = X[i].copy()
+                
+    return gbest, gbest_fitness
+
+if __name__ == "__main__":
+    print("=== Agriculture Monitoring PSO Optimizer ===")
+    print("Enter the ideal sensor deployment coverage levels (%) for your farm zones.")
+    
+    try:
+        zone_a = float(input("Ideal allocation for Zone A (0-100%): "))
+        zone_b = float(input("Ideal allocation for Zone B (0-100%): "))
+        zone_c = float(input("Ideal allocation for Zone C (0-100%): "))
+        
+        user_targets = np.array([zone_a, zone_b, zone_c])
+        
+        print("\nOptimizing deployment strategy using Swarm Intelligence...")
+        best_allocation, minimum_error = run_agriculture_pso(user_targets)
+        
+        print("\n=== Optimization Results ===")
+        print(f"Optimal Allocation for Zone A: {best_allocation[0]:.2f}%")
+        print(f"Optimal Allocation for Zone B: {best_allocation[1]:.2f}%")
+        print(f"Optimal Allocation for Zone C: {best_allocation[2]:.2f}%")
+        print(f"Final Optimization Error Margin: {minimum_error:.6f}")
+        
+    except ValueError:
+        print("Please enter valid numeric values for the percentages.")
